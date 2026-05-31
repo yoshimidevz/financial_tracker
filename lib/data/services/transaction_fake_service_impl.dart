@@ -24,22 +24,18 @@ class TransactionFakeServiceImpl implements TransactionStorageContract {
                     TransactionEntity.fromMap(item as Map<String, dynamic>),
               )
               .toList();
-      return Success(transactions); // Retorna um exemplo.
+      return Success(transactions);
     } on DatasourceResultEmpty catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DatasourceResultEmpty(e.toString()));
     } on APIFailure catch (e) {
-      // Retorna erro em caso de falha.
       return Error(APIFailure(e.toString()));
     } on Exception catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DefaultError('Erro ao buscar o estudante: ${e.toString()}'));
     }
   }
 
   @override
   Future<Result<TransactionEntity, Failure>> fetchTransacion(String id) {
-    // TODO: implement fetchTransacion
     throw UnimplementedError();
   }
 
@@ -47,7 +43,6 @@ class TransactionFakeServiceImpl implements TransactionStorageContract {
   Future<Result<List<TransactionEntity>, Failure>> fetchTransacionsByTipe(
     TransactionType type,
   ) {
-    // TODO: implement fetchTransacionsByTipe
     throw UnimplementedError();
   }
 
@@ -58,13 +53,10 @@ class TransactionFakeServiceImpl implements TransactionStorageContract {
 
       return Success(null);
     } on RecordNotFound catch (e) {
-      // Retorna erro em caso de falha.
       return Error(RecordNotFound('Na Exclusão: ${e.toString()}'));
     } on APIFailure catch (e) {
-      // Retorna erro em caso de falha.
       return Error(APIFailure(e.toString()));
     } on Exception catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DefaultError('Erro ao buscar o estudante: ${e.toString()}'));
     }
   }
@@ -78,14 +70,30 @@ class TransactionFakeServiceImpl implements TransactionStorageContract {
 
       return Success(null);
     } on InvalidData catch (e) {
-      // Retorna erro em caso de falha.
       return Error(InvalidData('Na Inclusão: ${e.toString()}'));
     } on APIFailure catch (e) {
-      // Retorna erro em caso de falha.
       return Error(APIFailure(e.toString()));
     } on Exception catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DefaultError('Erro ao buscar o estudante: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Result<void, Failure>> updateTransacion(
+    TransactionEntity transaction,
+  ) async {
+    try {
+      await _api.updateData(transaction);
+
+      return Success(null);
+    } on RecordNotFound catch (e) {
+      return Error(RecordNotFound('Na Atualização: ${e.toString()}'));
+    } on APIFailure catch (e) {
+      return Error(APIFailure(e.toString()));
+    } on Exception catch (e) {
+      return Error(
+        DefaultError('Erro ao atualizar a transação: ${e.toString()}'),
+      );
     }
   }
 
@@ -106,15 +114,12 @@ class TransactionFakeServiceImpl implements TransactionStorageContract {
                     TransactionEntity.fromMap(item as Map<String, dynamic>),
               )
               .toList();
-      return Success(transactions); // Retorna um exemplo.
+      return Success(transactions);
     } on DatasourceResultEmpty catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DatasourceResultEmpty(e.toString()));
     } on APIFailure catch (e) {
-      // Retorna erro em caso de falha.
       return Error(APIFailure(e.toString()));
     } on Exception catch (e) {
-      // Retorna erro em caso de falha.
       return Error(DefaultError('Erro ao Transações: ${e.toString()}'));
     }
   }
