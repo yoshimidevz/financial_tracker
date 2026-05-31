@@ -1,19 +1,23 @@
+import 'package:financial_tracker/domain/entity/transaction_entity.dart';
+import 'package:financial_tracker/ui/widget/category_pie_chart.dart';
+
 import 'summary_card.dart';
 import 'summary_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class SummaryCarousel extends StatefulWidget {
-  /// Total income amount
   final double totalIncome;
-
-  /// Total expense amount
   final double totalExpense;
+  final List<TransactionEntity> incomeTransactions;
+  final List<TransactionEntity> expenseTransactions;
 
   const SummaryCarousel({
     super.key,
     required this.totalIncome,
     required this.totalExpense,
+    required this.incomeTransactions,
+    required this.expenseTransactions,
   });
 
   @override
@@ -26,6 +30,13 @@ class _SummaryCarouselState extends State<SummaryCarousel>
   int _currentPage = 0;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+
+  static const int _pageCount = 3;
+  static const List<String> _pageLabels = [
+    'Gráfico de Receitas/Despesas',
+    'Gráfico por Categoria',
+    'Resumo',
+  ];
 
   @override
   void initState() {
@@ -50,71 +61,36 @@ class _SummaryCarouselState extends State<SummaryCarousel>
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: <Widget>[
-        // Animated carousel of financial widgets
+      children: [
         AnimatedBuilder(
           animation: _scaleAnimation,
-          builder: (context, child) {
-            return Transform.scale(scale: _scaleAnimation.value, child: child);
-          },
+          builder: (context, child) =>
+              Transform.scale(scale: _scaleAnimation.value, child: child),
           child: SizedBox(
-            height: 240, // Fixed height for carousel
+            height: 240,
             child: PageView.builder(
               controller: _pageController,
-              physics:
-                  const BouncingScrollPhysics(), // Add bouncing effect for better feedback
-              itemCount: 2, // Summary card and chart
+              physics: const BouncingScrollPhysics(),
+              itemCount: _pageCount,
               onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-                // Add haptic feedback when switching pages
+                setState(() => _currentPage = index);
                 HapticFeedback.lightImpact();
               },
               itemBuilder: (context, index) {
-                // Select which widget to show based on index
-                if (index == 0) {
-                  // Summary card page
-                  return Hero(
-                    tag: 'summary1-card',
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: SummaryCard(
-                        totalIncome: widget.totalIncome,
-                        totalExpense: widget.totalExpense,
-                        balance: widget.totalIncome - widget.totalExpense,
-                      ),
-                    ),
-                  );
-                } else {
-                  // Chart widget page
-                  return Hero(
-                    tag: 'chart-widget',
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: SummaryChart(
-                          totalIncome: widget.totalIncome,
-                          totalExpense: widget.totalExpense,
-                        ),
-                      ),
-                    ),
-                  );
-                }
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: _buildPage(index),
+                );
               },
             ),
           ),
         ),
         const SizedBox(height: 8),
-        // Animated page indicator dots
+        // Indicadores de página
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            2,
+            _pageCount,
             (index) => TweenAnimationBuilder(
               tween: Tween<double>(
                 begin: 0.0,
@@ -125,12 +101,11 @@ class _SummaryCarouselState extends State<SummaryCarousel>
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   height: 8,
-                  width: value * 24 + 8, // Animated width
+                  width: value * 24 + 8,
                   decoration: BoxDecoration(
-                    color:
-                        _currentPage == index
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.withValues(alpha: 0.4),
+                    color: _currentPage == index
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -138,12 +113,12 @@ class _SummaryCarouselState extends State<SummaryCarousel>
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        // Swipe indicator text
+        const SizedBox(height: 4),
+        // Dica de navegação
         Padding(
           padding: const EdgeInsets.only(top: 4.0),
           child: Text(
-            'Arraste para Visualizar o ${_currentPage == 0 ? "Gráfico" : "Resumo"}',
+            'Arraste para ver: ${_pageLabels[(_currentPage + 1) % _pageCount]}',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
@@ -153,5 +128,48 @@ class _SummaryCarouselState extends State<SummaryCarousel>
         ),
       ],
     );
+  }
+
+  Widget _buildPage(int index) {
+    switch (index) {
+      case 0:
+        return Hero(
+          tag: 'summary1-card',
+          child: SummaryCard(
+            totalIncome: widget.totalIncome,
+            totalExpense: widget.totalExpense,
+            balance: widget.totalIncome - widget.totalExpense,
+          ),
+        );
+      case 1:
+        return Hero(
+          tag: 'chart-widget',
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SummaryChart(
+              totalIncome: widget.totalIncome,
+              totalExpense: widget.totalExpense,
+            ),
+          ),
+        );
+      case 2:
+      default:
+        return Hero(
+          tag: 'category-pie-chart',
+          child: Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: CategoryPieChart(
+              incomeTransactions: widget.incomeTransactions,
+              expenseTransactions: widget.expenseTransactions,
+            ),
+          ),
+        );
+    }
   }
 }
