@@ -176,6 +176,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 onDelete: (id) {
                   viewModelController.deleteTransaction.execute(id);
                 },
+                onEdit: (transaction) {
+                  _showEditSheet(context, transaction);
+                },
                 undoDelete: viewModelController.undoDelectedTransaction,
                 scaffoldContext: context,
               );
@@ -257,18 +260,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Show expense transaction sheet
   void _showExpenseSheet(BuildContext context) {
-    //final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
-
     TransactionSheet.show(
       context: context,
       type: TransactionType.expense,
       submitCommand: viewModelController.saveTransaction,
-      // onSubmit: (newTransaction) {
-      //   viewModelController.saveTransaction.execute(newTransaction);
-      // },
-      // onSubmit: (title, amount, date) {
-      //   transactionProvider.addExpense(title, amount, date);
-      // },
+    );
+  }
+
+  /// Show edit transaction sheet
+  void _showEditSheet(BuildContext context, TransactionEntity transaction) {
+    TransactionSheet.show(
+      context: context,
+      type: transaction.type,
+      submitCommand: viewModelController.editTransaction,
+      initialTransaction: transaction,
     );
   }
 }
