@@ -1,5 +1,6 @@
 import 'package:financial_tracker/common/errors/errors_classes.dart';
 import 'package:financial_tracker/common/patterns/command.dart';
+import 'package:financial_tracker/domain/entity/transaction_category.dart';
 import 'package:financial_tracker/domain/entity/transaction_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -7,16 +8,9 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 /// Um widget reutilizável de formulário para adicionar transações de receita ou despesa
 class TransactionForm extends StatefulWidget {
-  /// Comando que deve ser observado o estado de execução
   final Command1<void, Failure, TransactionEntity> submitCommand;
-
-  /// Tipo de transação (receita ou despesa)
   final TransactionType type;
-
-  /// Cor do tema para o formulário
   final Color color;
-
-  /// Transação existente para edição (null = novo registro)
   final TransactionEntity? initialTransaction;
 
   const TransactionForm({
@@ -36,13 +30,13 @@ class _TransactionFormState extends State<TransactionForm> {
   late final TextEditingController _titleController;
   late final TextEditingController _amountController;
   late DateTime _selectedDate;
+  late TransactionCategory _selectedCategory;
 
   bool get _isEditing => widget.initialTransaction != null;
 
   @override
   void initState() {
     super.initState();
-    // Pré-preenche os campos se estiver editando
     _titleController = TextEditingController(
       text: widget.initialTransaction?.title ?? '',
     );
@@ -52,6 +46,8 @@ class _TransactionFormState extends State<TransactionForm> {
           : '',
     );
     _selectedDate = widget.initialTransaction?.date ?? DateTime.now();
+    _selectedCategory = widget.initialTransaction?.category ??
+        TransactionCategoryExtension.defaultFor(widget.type);
   }
 
   @override
@@ -61,7 +57,6 @@ class _TransactionFormState extends State<TransactionForm> {
     super.dispose();
   }
 
-  /// Exibe o seletor de datas e atualiza a data selecionada
   void _presentDatePicker() async {
     final pickedDate = await showDatePicker(
       context: context,
@@ -69,27 +64,20 @@ class _TransactionFormState extends State<TransactionForm> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-
     if (pickedDate != null) {
-      setState(() {
-        _selectedDate = pickedDate;
-      });
+      setState(() => _selectedDate = pickedDate);
     }
   }
 
-  /// Envia o formulário se a validação for bem-sucedida
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      final enteredTitle = _titleController.text;
-      final enteredAmount = double.parse(_amountController.text);
-
       final transaction = TransactionEntity(
-        // Mantém o mesmo ID se for edição
         id: widget.initialTransaction?.id,
-        title: enteredTitle,
-        amount: enteredAmount,
+        title: _titleController.text,
+        amount: double.parse(_amountController.text),
         date: _selectedDate,
         type: widget.type,
+        category: _selectedCategory,
       );
 
       await widget.submitCommand.execute(transaction);
@@ -114,6 +102,8 @@ class _TransactionFormState extends State<TransactionForm> {
         _amountController.clear();
         setState(() {
           _selectedDate = DateTime.now();
+          _selectedCategory =
+              TransactionCategoryExtension.defaultFor(widget.type);
         });
       }
 
@@ -132,6 +122,8 @@ class _TransactionFormState extends State<TransactionForm> {
 
   @override
   Widget build(BuildContext context) {
+    final categories = TransactionCategoryExtension.forType(widget.type);
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Form(
@@ -139,7 +131,7 @@ class _TransactionFormState extends State<TransactionForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Campo de descrição
+            // Descrição
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -158,7 +150,7 @@ class _TransactionFormState extends State<TransactionForm> {
             ),
             const SizedBox(height: 16),
 
-            // Campo de valor
+            // Valor
             TextFormField(
               controller: _amountController,
               decoration: InputDecoration(
@@ -168,25 +160,56 @@ class _TransactionFormState extends State<TransactionForm> {
                 ),
                 prefixIcon: const Icon(Icons.attach_money),
               ),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Informe um valor';
-                }
-                if (double.tryParse(value) == null) {
-                  return 'Digite um número válido';
-                }
-                if (double.parse(value) <= 0) {
-                  return 'O valor deve ser maior que zero';
-                }
+                if (value == null || value.isEmpty) return 'Informe um valor';
+                if (double.tryParse(value) == null) return 'Digite um número válido';
+                if (double.parse(value) <= 0) return 'O valor deve ser maior que zero';
                 return null;
               },
             ),
             const SizedBox(height: 16),
 
-            // Seletor de data
+            // Categoria
+            DropdownButtonFormField<TransactionCategory>(
+              value: _selectedCategory,
+              decoration: InputDecoration(
+                labelText: 'Categoria',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: Icon(
+                  _selectedCategory.icon,
+                  color: widget.color,
+                ),
+              ),
+              // O selectedItemBuilder define como o item selecionado aparece quando o dropdown está fechado
+              selectedItemBuilder: (context) {
+                return categories.map((cat) {
+                  return Text(cat.label);
+                }).toList();
+              },
+              items: categories.map((cat) {
+                return DropdownMenuItem(
+                  value: cat,
+                  child: Row(
+                    children: [
+                      Icon(cat.icon, size: 18, color: widget.color),
+                      const SizedBox(width: 10),
+                      Text(cat.label),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedCategory = value);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Data
             Row(
               children: [
                 Expanded(
@@ -212,7 +235,6 @@ class _TransactionFormState extends State<TransactionForm> {
             // Botão de envio
             Watch((context) {
               final isRunning = widget.submitCommand.runningSignal.value;
-
               return SizedBox(
                 height: 50,
                 child: ElevatedButton(
@@ -223,24 +245,22 @@ class _TransactionFormState extends State<TransactionForm> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child:
-                      isRunning
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                          : Text(
-                            _isEditing
-                                ? 'Salvar ${widget.type.nameSingular}'
-                                : 'Adicionar ${widget.type.nameSingular}',
-                            style: const TextStyle(fontSize: 16),
+                  child: isRunning
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
+                        )
+                      : Text(
+                          _isEditing
+                              ? 'Salvar ${widget.type.nameSingular}'
+                              : 'Adicionar ${widget.type.nameSingular}',
+                          style: const TextStyle(fontSize: 16),
+                        ),
                 ),
               );
             }),
