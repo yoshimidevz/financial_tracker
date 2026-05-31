@@ -1,19 +1,14 @@
 import 'package:financial_tracker/common/errors/errors_classes.dart';
 import 'package:financial_tracker/common/patterns/command.dart';
+import 'package:financial_tracker/common/theme/app_theme.dart';
 import 'package:financial_tracker/domain/entity/transaction_entity.dart';
 import 'package:flutter/material.dart';
 
 import 'transaction_form.dart';
 
-/// Bottom sheet para adicionar transações de receita ou despesa
 class TransactionSheet extends StatelessWidget {
-  /// Tipo da transação (receita ou despesa)
   final TransactionType type;
-
-  /// Comando que deve ser observado o estado de execução
   final Command1<void, Failure, TransactionEntity> submitCommand;
-
-  /// Transação existente para edição (null = novo registro)
   final TransactionEntity? initialTransaction;
 
   const TransactionSheet({
@@ -23,7 +18,6 @@ class TransactionSheet extends StatelessWidget {
     this.initialTransaction,
   });
 
-  /// Método auxiliar para exibir o bottom sheet como um modal
   static Future<void> show({
     required BuildContext context,
     required TransactionType type,
@@ -46,18 +40,14 @@ class TransactionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = type == TransactionType.income;
-    final color = isIncome ? colorScheme.primary : colorScheme.secondary;
-    final formTitle = type.nameSingular;
-
     final availableHeight = MediaQuery.of(context).size.height * 0.75;
 
     return Container(
       height: availableHeight,
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
+        color: isDark ? const Color(0xFF152030) : AppColors.white,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -66,67 +56,70 @@ class TransactionSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Cabeçalho
-          Container(
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2A3A50) : AppColors.grey200,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            child: Column(
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
+            child: Row(
               children: [
-                // Alça de arrasto
                 Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40,
-                  height: 4,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.onPrimary.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
+                    color: isIncome
+                        ? AppColors.blue700.withOpacity(0.1)
+                        : AppColors.expense.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    _isEditing
+                        ? Icons.edit_rounded
+                        : (isIncome
+                            ? Icons.trending_up_rounded
+                            : Icons.trending_down_rounded),
+                    color: isIncome ? AppColors.blue700 : AppColors.expense,
+                    size: 18,
                   ),
                 ),
-
-                // Título
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _isEditing
-                            ? Icons.edit
-                            : (isIncome
-                                ? Icons.trending_up
-                                : Icons.trending_down),
-                        color: colorScheme.onPrimary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${_isEditing ? 'Editar' : 'Adicionar'} $formTitle',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 12),
+                Text(
+                  '${_isEditing ? 'Editar' : 'Adicionar'} ${type.nameSingular}',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                    color: isDark ? AppColors.white : AppColors.grey800,
                   ),
                 ),
               ],
             ),
           ),
 
-          // Formulário
+          Divider(
+            height: 1,
+            color: isDark ? const Color(0xFF2A3A50) : AppColors.grey100,
+          ),
+
+          // Form
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
                 padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                ),
+                    bottom: MediaQuery.of(context).viewInsets.bottom),
                 child: TransactionForm(
                   type: type,
-                  color: color,
+                  color: isIncome ? AppColors.blue700 : AppColors.expense,
                   submitCommand: submitCommand,
                   initialTransaction: initialTransaction,
                 ),

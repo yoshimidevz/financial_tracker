@@ -1,4 +1,5 @@
 import '../../common/config/dependencies.dart';
+import '../../common/theme/app_theme.dart';
 import '../../common/types/date_filter_type.dart';
 import '../../domain/entity/transaction_entity.dart';
 import 'package:financial_tracker/ui/controller/home_page_controller.dart';
@@ -18,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late HomePageController viewModelController;
-  bool _isFilterVisible = false;
 
   @override
   void initState() {
@@ -28,56 +28,54 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleFilterVisibility() {
-    setState(() {
-      _isFilterVisible = !_isFilterVisible;
-    });
+    viewModelController.toggleFilterVisibility();
   }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark ? AppColors.grey800 : AppColors.grey50,
       appBar: AppBar(
-        title: const Text(
-          'Controle Financeiro',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        title: const Text('Controle Financeiro'),
+        backgroundColor: isDark ? AppColors.grey800 : AppColors.white,
+        foregroundColor: isDark ? AppColors.white : AppColors.grey800,
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, color: isDark ? const Color(0xFF2A3A50) : AppColors.grey200),
+        ),
         actions: [
           Watch((context) {
             final isVisible = viewModelController.isFilterVisible.value;
-            return IconButton(
-              icon: Icon(isVisible ? Icons.filter_list_off : Icons.filter_list),
+            return _AppBarIconBtn(
+              icon: isVisible ? Icons.filter_list_off_rounded : Icons.filter_list_rounded,
               tooltip: isVisible ? 'Ocultar filtros' : 'Mostrar filtros',
               onPressed: viewModelController.toggleFilterVisibility,
             );
           }),
-          // IconButton(
-          //   icon: Icon(
-          //     _isFilterVisible ? Icons.filter_list_off : Icons.filter_list,
-          //   ),
-          //   onPressed: _toggleFilterVisibility,
-          //   tooltip: _isFilterVisible ? 'Ocultar Filtros' : 'Mostrar Filtros',
-          // ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long),
-            onPressed: () {},
+          _AppBarIconBtn(
+            icon: Icons.receipt_long_rounded,
             tooltip: 'Visualizar todas as transações',
+            onPressed: () {},
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 8),
+          children: [
+            const SizedBox(height: 16),
+
+            // ── Summary Carousel ─────────────────────────────────────────
             Watch((context) {
-              final income = viewModelController.totalIncome.value;
-              final expense = viewModelController.totalExpense.value;
-              final incomes = viewModelController.incomes.value;
+              final income   = viewModelController.totalIncome.value;
+              final expense  = viewModelController.totalExpense.value;
+              final incomes  = viewModelController.incomes.value;
               final expenses = viewModelController.expenses.value;
               return SummaryCarousel(
                 totalIncome: income,
@@ -86,93 +84,68 @@ class _HomeScreenState extends State<HomeScreen> {
                 expenseTransactions: expenses,
               );
             }),
-            // SummaryCarousel(totalIncome: 4500.00, totalExpense: 1500.00),
-            // Anima do DataFilterTransactions
-            // a animação será aplicada na altura do container
-            // se _isFilterVisible falso, não tem conteudo para ser mostrado
+
+            // ── Date Filter ───────────────────────────────────────────────
             Watch((context) {
               final isVisible = viewModelController.isFilterVisible.value;
               return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height:
-                    isVisible
-                        ? null
-                        : 0, // se true altura é automática o conteudo, se false altura é 0
-                child:
-                    isVisible
-                        ? DateFilterTransactions(
-                          filtro: (
-                            type: viewModelController.filterType,
-                            startDate: viewModelController.startDate,
-                            endDate: viewModelController.endDate,
-                          ),
-                          onFilterChanged: (startDate, endDate) {
-                            viewModelController.searchTransactionsByDate
-                                .execute(startDate!, endDate!);
-                          },
-                          onUpdateFilter: (type, startDate, endDate) {
-                            viewModelController.setFiltersParams(
-                              type,
-                              startDate,
-                              endDate,
-                            );
-                          },
-                          onAllTransactionsFiltered: () {
-                            viewModelController.load.execute();
-                          },
-                          onTapHideFilter: _toggleFilterVisibility,
-                        )
-                        : const SizedBox.shrink(), // criar um espaço vazio
+                duration: const Duration(milliseconds: 250),
+                height: isVisible ? null : 0,
+                child: isVisible
+                    ? DateFilterTransactions(
+                        filtro: (
+                          type: viewModelController.filterType,
+                          startDate: viewModelController.startDate,
+                          endDate: viewModelController.endDate,
+                        ),
+                        onFilterChanged: (startDate, endDate) {
+                          viewModelController.searchTransactionsByDate
+                              .execute(startDate!, endDate!);
+                        },
+                        onUpdateFilter: (type, startDate, endDate) {
+                          viewModelController.setFiltersParams(
+                              type, startDate, endDate);
+                        },
+                        onAllTransactionsFiltered: () {
+                          viewModelController.load.execute();
+                        },
+                        onTapHideFilter: _toggleFilterVisibility,
+                      )
+                    : const SizedBox.shrink(),
               );
             }),
-            // AnimatedContainer(
-            //   duration: const Duration(milliseconds: 300),
-            //   height:
-            //       _isFilterVisible
-            //           ? null
-            //           : 0, // se true altura é automática o conteudo, se false altura é 0
-            //   child:
-            //       _isFilterVisible
-            //           ? DateFilterTransactions(
-            //             currentFilter: DateFilterType.all,
-            //             onFilterChanged: (_, _, type) {},
-            //             onTapHideFilter: _toggleFilterVisibility,
-            //           )
-            //           : const SizedBox.shrink(), // criar um espaço vazio
-            // ),
+
+            // ── Action Buttons ────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 children: [
-                  // Add Income button
                   Expanded(
-                    child: _buildActionButton(
-                      context,
-                      TransactionType.income,
-                      Icons.add_circle,
-                      colorScheme.primary,
-                      //() {},
-                      () => _showIncomeSheet(context),
+                    child: _ActionButton(
+                      type: TransactionType.income,
+                      icon: Icons.add_rounded,
+                      color: AppColors.blue700,
+                      onPressed: () => _showIncomeSheet(context),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // Add Expense button
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildActionButton(
-                      context,
-                      TransactionType.expense,
-                      Icons.remove_circle,
-                      colorScheme.secondary,
-                      () => _showExpenseSheet(context),
+                    child: _ActionButton(
+                      type: TransactionType.expense,
+                      icon: Icons.remove_rounded,
+                      color: AppColors.expense,
+                      onPressed: () => _showExpenseSheet(context),
                     ),
                   ),
                 ],
               ),
             ),
-            // Transactions card widget with Income and Expense tabs
+
+            const SizedBox(height: 16),
+
+            // ── Transactions ──────────────────────────────────────────────
             Watch((context) {
-              //final transactions = viewModelController.transctions.value;
-              final incomes = viewModelController.incomes.value;
+              final incomes  = viewModelController.incomes.value;
               final expenses = viewModelController.expenses.value;
               return TransactionCardSheets(
                 incomeTransactions: incomes,
@@ -188,36 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }),
 
-            // TransactionCardSheets(
-            //   incomeTransactions: [
-            //     TransactionEntity(
-            //       title: 'teste',
-            //       amount: 1200.00,
-            //       date: DateTime.now(),
-            //       type: TransactionType.income,
-            //     ),
-            //     TransactionEntity(
-            //       title: 'teste',
-            //       amount: 1200.00,
-            //       date: DateTime.now(),
-            //       type: TransactionType.income,
-            //     ),
-            //     TransactionEntity(
-            //       title: 'teste',
-            //       amount: 1200.00,
-            //       date: DateTime.now(),
-            //       type: TransactionType.income,
-            //     ),
-            //     TransactionEntity(
-            //       title: 'teste',
-            //       amount: 1200.00,
-            //       date: DateTime.now(),
-            //       type: TransactionType.income,
-            //     ),
-            //   ],
-            //   expenseTransactions: [],
-            //   onDelete: (id) {},
-            // ),
             const SizedBox(height: 32),
           ],
         ),
@@ -225,44 +168,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Constrói botões para receitas e despesas
-  Widget _buildActionButton(
-    BuildContext context,
-    TransactionType transactionType,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return ElevatedButton.icon(
-      icon: Icon(icon, color: Colors.white),
-      label: Text(transactionType.namePlural),
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  /// Show income transaction sheet
   void _showIncomeSheet(BuildContext context) {
-    //final transactionProvider = Provider.of<TransactionProvider>(context, listen: false);
-
     TransactionSheet.show(
       context: context,
       type: TransactionType.income,
       submitCommand: viewModelController.saveTransaction,
-      // onSubmit: (newTransaction) {
-      //   viewModelController.saveTransaction.execute(newTransaction);
-      // },
-      // onSubmit: (title, amount, date) {
-      //   transactionProvider.addIncome(title, amount, date);
-      // },
     );
   }
 
-  /// Show expense transaction sheet
   void _showExpenseSheet(BuildContext context) {
     TransactionSheet.show(
       context: context,
@@ -271,13 +184,104 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Show edit transaction sheet
   void _showEditSheet(BuildContext context, TransactionEntity transaction) {
     TransactionSheet.show(
       context: context,
       type: transaction.type,
       submitCommand: viewModelController.editTransaction,
       initialTransaction: transaction,
+    );
+  }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+class _AppBarIconBtn extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _AppBarIconBtn({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return IconButton(
+      icon: Icon(icon, size: 22),
+      tooltip: tooltip,
+      color: isDark ? AppColors.grey400 : AppColors.grey600,
+      splashRadius: 20,
+      onPressed: onPressed,
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final TransactionType type;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _ActionButton({
+    required this.type,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isIncome = type == TransactionType.income;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          decoration: BoxDecoration(
+            color: isIncome
+                ? (isDark ? AppColors.blue700.withOpacity(0.18) : AppColors.blue50)
+                : (isDark ? AppColors.grey600.withOpacity(0.18) : AppColors.grey100),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isIncome
+                  ? AppColors.blue200.withOpacity(isDark ? 0.3 : 0.8)
+                  : AppColors.grey200,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                type.namePlural,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

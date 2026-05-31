@@ -1,25 +1,14 @@
+import 'package:financial_tracker/common/theme/app_theme.dart';
 import 'package:financial_tracker/common/types/date_filter_type.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-//enum DateFilterType { all, today, week, month, custom }
-
-/// Widget for filtering transactions by date
 class DateFilterTransactions extends StatefulWidget {
-  /// Callback for when date filter changes
   final Function(DateTime? startDate, DateTime? endDate) onFilterChanged;
-
-  /// Função de callback quando o formulário é enviado
   final Function() onAllTransactionsFiltered;
-
-  // call para atualizar o filtro de data
-  final Function(DateFilterType type, DateTime? startDate, DateTime? endDate)
-  onUpdateFilter;
-
-  /// Callback for when the filter is hidden
+  final Function(DateFilterType type, DateTime? startDate, DateTime? endDate) onUpdateFilter;
   final VoidCallback? onTapHideFilter;
-
-final ({DateFilterType type, DateTime? startDate, DateTime? endDate}) filtro;
+  final ({DateFilterType type, DateTime? startDate, DateTime? endDate}) filtro;
 
   const DateFilterTransactions({
     super.key,
@@ -39,21 +28,26 @@ class _DateFilterWidgetState extends State<DateFilterTransactions> {
   DateTime? _startDate;
   DateTime? _endDate;
 
+  static const _labels = {
+    DateFilterType.all: 'Tudo',
+    DateFilterType.today: 'Hoje',
+    DateFilterType.week: 'Esta Semana',
+    DateFilterType.month: 'Este Mês',
+    DateFilterType.custom: 'Personalizado',
+  };
+
   @override
   void initState() {
     super.initState();
     _filterType = widget.filtro.type;
     _startDate = widget.filtro.startDate;
     _endDate = widget.filtro.endDate;
-
-    // Initialize dates based on current filter
     _initializeDates();
   }
 
   void _initializeDates() {
     final now = DateTime.now();
     final range = _filterType.resolveRange(now, _startDate, _endDate);
-
     setState(() {
       _startDate = range?.start;
       _endDate = range?.end;
@@ -65,7 +59,6 @@ class _DateFilterWidgetState extends State<DateFilterTransactions> {
       _filterType = type;
       _initializeDates();
     });
-
     if (type == DateFilterType.all) {
       widget.onAllTransactionsFiltered();
     } else {
@@ -75,56 +68,35 @@ class _DateFilterWidgetState extends State<DateFilterTransactions> {
   }
 
   Future<void> _selectCustomDateRange() async {
-    // final now = DateTime.now();
-    // final initialDateRange = DateTimeRange(
-    //   start: _startDate ?? DateTime(now.year, now.month, 1),
-    //   end: _endDate ?? now,
-    // );
-    // print(_startDate);
-    // print(_endDate);
-    // print(initialDateRange);
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 1));
-
     final safeRange = _filterType
         .resolveRange(now, _startDate, _endDate)
-        ?.cappedAt(
-          maxDate,
-        ); // com operador "?", cappedAt só é executado se o valor não for nulo retornado por resolveRange
+        ?.cappedAt(maxDate);
 
-    final pickedDateRange = await showDateRangePicker(
+    final picked = await showDateRangePicker(
       context: context,
       initialDateRange: safeRange,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: Theme.of(context).colorScheme.primary,
-              onPrimary: Colors.white,
-            ),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.blue700,
+            onPrimary: Colors.white,
           ),
-          child: child!,
-        );
-      },
+        ),
+        child: child!,
+      ),
     );
 
-    if (pickedDateRange != null) {
+    if (picked != null) {
       setState(() {
         _filterType = DateFilterType.custom;
-        _startDate = pickedDateRange.start;
-        // Set end date to end of day
+        _startDate = picked.start;
         _endDate = DateTime(
-          pickedDateRange.end.year,
-          pickedDateRange.end.month,
-          pickedDateRange.end.day,
-          23,
-          59,
-          59,
-        );
+            picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
       });
-
       widget.onFilterChanged(_startDate, _endDate);
       widget.onUpdateFilter(_filterType, _startDate, _endDate);
     }
@@ -132,102 +104,130 @@ class _DateFilterWidgetState extends State<DateFilterTransactions> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              theme.colorScheme.primary.withValues(alpha: 0.7),
-              theme.colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          color: isDark ? const Color(0xFF1E2D40) : AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2A3A50) : AppColors.grey200,
+            width: 1,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Filter title
+            // Header row
             Row(
               children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.filter_list,
-                    color: theme.colorScheme.onSecondary,
-                  ),
-                  onPressed: () {
-                    // Aqui você aciona a função que alterna visibilidade
-                    // Essa função vem da tela principal, então passe como parâmetro
-                    widget.onTapHideFilter
-                        ?.call(); // ou diretamente: _toggleFilterVisibility()
-                  },
-                ),
+                Icon(Icons.tune_rounded,
+                    size: 16, color: AppColors.blue700),
                 const SizedBox(width: 8),
                 Text(
-                  'Filtro de Data de Transações',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSecondary,
+                  'Filtro de Data',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.white : AppColors.grey800,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: widget.onTapHideFilter,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF243347) : AppColors.grey100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(Icons.close_rounded,
+                        size: 14,
+                        color: isDark ? AppColors.grey400 : AppColors.grey600),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
 
-            // Wrap envolve os widgets filhos em uma linha com quebra automática
+            const SizedBox(height: 12),
+
+            // Filter chips
             Wrap(
-              spacing: 8,
-              children: [
-                _buildFilterChip(DateFilterType.all, 'Tudo'),
-                _buildFilterChip(DateFilterType.today, 'Hoje'),
-                _buildFilterChip(DateFilterType.week, 'Esta Semana'),
-                _buildFilterChip(DateFilterType.month, 'Este Mês'),
-                _buildFilterChip(DateFilterType.custom, 'Personalizado'),
-              ],
+              spacing: 6,
+              runSpacing: 6,
+              children: DateFilterType.values.map((type) {
+                final isSelected = _filterType == type;
+                return GestureDetector(
+                  onTap: () {
+                    if (type == DateFilterType.custom) {
+                      _selectCustomDateRange();
+                    } else {
+                      _applyFilter(type);
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.blue700
+                          : (isDark ? const Color(0xFF243347) : AppColors.grey100),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.blue700
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _labels[type] ?? '',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? AppColors.grey400 : AppColors.grey600),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
 
-            // Show date range if custom filter selected
-            if (_filterType == DateFilterType.custom) ...[
+            // Custom date range display
+            if (_filterType == DateFilterType.custom && _startDate != null && _endDate != null) ...[
               const SizedBox(height: 12),
-              InkWell(
+              GestureDetector(
                 onTap: _selectCustomDateRange,
-                borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
+                    color: AppColors.blue50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: theme.colorScheme.outline),
+                    border: Border.all(color: AppColors.blue200, width: 1),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.date_range,
-                        size: 18,
-                        color: theme.colorScheme.primary,
-                      ),
+                      const Icon(Icons.date_range_rounded,
+                          size: 14, color: AppColors.blue700),
                       const SizedBox(width: 8),
                       Text(
-                        '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
-                        style: theme.textTheme.bodyMedium,
+                        '${DateFormat('dd/MM/yyyy').format(_startDate!)} → ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.blue700,
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.edit,
-                        size: 16,
-                        color: theme.colorScheme.primary,
-                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.edit_rounded,
+                          size: 12, color: AppColors.blue700),
                     ],
                   ),
                 ),
@@ -235,38 +235,6 @@ class _DateFilterWidgetState extends State<DateFilterTransactions> {
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  /// Build a filter chip for date selection
-  Widget _buildFilterChip(DateFilterType type, String label) {
-    final theme = Theme.of(context);
-    final isSelected = _filterType == type;
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 700),
-      child: ChoiceChip(
-        checkmarkColor: theme.colorScheme.onSecondary,
-        label: Text(label),
-        selected: isSelected,
-        selectedColor: theme.colorScheme.primary.withValues(alpha: 0.9),
-        labelStyle: TextStyle(
-          color:
-              isSelected
-                  ? theme.colorScheme.onSecondary
-                  : theme.textTheme.bodyLarge?.color,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-        onSelected: (selected) {
-          if (selected) {
-            if (type == DateFilterType.custom) {
-              _selectCustomDateRange();
-            } else {
-              _applyFilter(type);
-            }
-          }
-        },
       ),
     );
   }

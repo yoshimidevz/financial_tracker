@@ -1,15 +1,10 @@
+import 'package:financial_tracker/common/theme/app_theme.dart';
 import 'package:financial_tracker/common/utils/formatter.dart';
 import 'package:flutter/material.dart';
 
-/// Widget to display financial summary information
 class SummaryCard extends StatelessWidget {
-  /// Total income amount
   final double totalIncome;
-
-  /// Total expense amount
   final double totalExpense;
-
-  /// Current balance amount
   final double balance;
 
   const SummaryCard({
@@ -21,66 +16,145 @@ class SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isPositive = balance >= 0;
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.all(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              colorScheme.primary.withValues(alpha: 0.7),
-              colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF0D2137), AppColors.blue900]
+              : [AppColors.blue700, const Color(0xFF1E40AF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.blue700.withOpacity(isDark ? 0.25 : 0.35),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Card header
-            Text(
-              'Resumo Financeiro',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: colorScheme.onSecondary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-    
-            // Three key financial indicators
+            // Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                // Income
-                _buildSummaryItem(
-                  context,
-                  'Receita',
-                  Formatter.formatCurrency(totalIncome),
-                  Icons.arrow_upward,
-                  colorScheme.secondary,
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ),
-                // Expense
-                _buildSummaryItem(
-                  context,
-                  'Despesa',
-                  Formatter.formatCurrency(totalExpense),
-                  Icons.arrow_downward,
-                  colorScheme.tertiary,
+                const SizedBox(width: 10),
+                const Text(
+                  'Resumo Financeiro',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-                // Balance
-                _buildSummaryItem(
-                  context,
-                  'Balanço',
-                  Formatter.formatCurrency(balance),
-                  Icons.account_balance_wallet,
-                  balance >= 0 ? Colors.green : Colors.red,
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Balance (big)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  Formatter.formatCurrency(balance.abs()),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isPositive
+                          ? Colors.white.withOpacity(0.18)
+                          : Colors.red.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          isPositive ? 'Saldo positivo' : 'Saldo negativo',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // Divider
+            Container(
+              height: 1,
+              color: Colors.white.withOpacity(0.15),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Income + Expense row
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Receita',
+                    amount: totalIncome,
+                    icon: Icons.arrow_upward_rounded,
+                    iconColor: const Color(0xFF86EFAC),
+                  ),
+                ),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+                Expanded(
+                  child: _MiniStat(
+                    label: 'Despesa',
+                    amount: totalExpense,
+                    icon: Icons.arrow_downward_rounded,
+                    iconColor: const Color(0xFFFCA5A5),
+                    alignRight: true,
+                  ),
                 ),
               ],
             ),
@@ -89,46 +163,67 @@ class SummaryCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  /// Helper method to build individual summary items
-  Widget _buildSummaryItem(
-    BuildContext context,
-    String title,
-    String amount,
-    IconData icon,
-    Color color,
-  ) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Column(
-      children: [
-        // Icon with background
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: colorScheme.onSecondary.withValues(alpha: 0.45),
-            shape: BoxShape.circle,
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final double amount;
+  final IconData icon;
+  final Color iconColor;
+  final bool alignRight;
+
+  const _MiniStat({
+    required this.label,
+    required this.amount,
+    required this.icon,
+    required this.iconColor,
+    this.alignRight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: alignRight ? 16 : 0,
+        right: alignRight ? 0 : 16,
+      ),
+      child: Row(
+        mainAxisAlignment: alignRight ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!alignRight) ...[
+            Icon(icon, color: iconColor, size: 16),
+            const SizedBox(width: 8),
+          ],
+          Column(
+            crossAxisAlignment: alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.65),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                Formatter.formatCurrency(amount),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, color: color),
-        ),
-        const SizedBox(height: 8),
-        // Title
-        Text(
-          title,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSecondary.withValues(alpha: 0.95),
-          ),
-        ),
-        const SizedBox(height: 4),
-        // Amount
-        Text(
-          amount,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: colorScheme.onSecondary,
-          ),
-        ),
-      ],
+          if (alignRight) ...[
+            const SizedBox(width: 8),
+            Icon(icon, color: iconColor, size: 16),
+          ],
+        ],
+      ),
     );
   }
 }

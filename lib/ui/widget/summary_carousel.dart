@@ -1,5 +1,6 @@
 import 'package:financial_tracker/domain/entity/transaction_entity.dart';
 import 'package:financial_tracker/ui/widget/category_pie_chart.dart';
+import 'package:financial_tracker/common/theme/app_theme.dart';
 
 import 'summary_card.dart';
 import 'summary_chart.dart';
@@ -26,104 +27,77 @@ class SummaryCarousel extends StatefulWidget {
 
 class _SummaryCarouselState extends State<SummaryCarousel>
     with SingleTickerProviderStateMixin {
-  final PageController _pageController = PageController();
+  final PageController _pageController = PageController(viewportFraction: 0.92);
   int _currentPage = 0;
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
 
   static const int _pageCount = 3;
   static const List<String> _pageLabels = [
-    'Gráfico de Receitas/Despesas',
-    'Gráfico por Categoria',
     'Resumo',
+    'Receitas vs. Despesas',
+    'Por Categoria',
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.forward();
-  }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
-        AnimatedBuilder(
-          animation: _scaleAnimation,
-          builder: (context, child) =>
-              Transform.scale(scale: _scaleAnimation.value, child: child),
-          child: SizedBox(
-            height: 240,
-            child: PageView.builder(
-              controller: _pageController,
-              physics: const BouncingScrollPhysics(),
-              itemCount: _pageCount,
-              onPageChanged: (index) {
-                setState(() => _currentPage = index);
-                HapticFeedback.lightImpact();
-              },
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: _buildPage(index),
-                );
-              },
+        SizedBox(
+          height: 210,
+          child: PageView.builder(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _pageCount,
+            onPageChanged: (index) {
+              setState(() => _currentPage = index);
+              HapticFeedback.selectionClick();
+            },
+            itemBuilder: (context, index) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: _buildPage(index),
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        // Indicadores de página
+
+        const SizedBox(height: 14),
+
+        // Page indicator dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            _pageCount,
-            (index) => TweenAnimationBuilder(
-              tween: Tween<double>(
-                begin: 0.0,
-                end: _currentPage == index ? 1.0 : 0.0,
+          children: List.generate(_pageCount, (index) {
+            final isActive = _currentPage == index;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              height: 6,
+              width: isActive ? 20 : 6,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppColors.blue700
+                    : (isDark ? AppColors.grey600 : AppColors.grey200),
+                borderRadius: BorderRadius.circular(3),
               ),
-              duration: const Duration(milliseconds: 300),
-              builder: (context, double value, _) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  height: 8,
-                  width: value * 24 + 8,
-                  decoration: BoxDecoration(
-                    color: _currentPage == index
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                );
-              },
-            ),
-          ),
+            );
+          }),
         ),
-        const SizedBox(height: 4),
-        // Dica de navegação
-        Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: Text(
-            'Arraste para ver: ${_pageLabels[(_currentPage + 1) % _pageCount]}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontStyle: FontStyle.italic,
-            ),
+
+        const SizedBox(height: 8),
+
+        // Hint label
+        Text(
+          _pageLabels[(_currentPage + 1) % _pageCount],
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? AppColors.grey400 : AppColors.grey400,
+            letterSpacing: 0.2,
           ),
         ),
       ],
@@ -133,43 +107,48 @@ class _SummaryCarouselState extends State<SummaryCarousel>
   Widget _buildPage(int index) {
     switch (index) {
       case 0:
-        return Hero(
-          tag: 'summary1-card',
-          child: SummaryCard(
-            totalIncome: widget.totalIncome,
-            totalExpense: widget.totalExpense,
-            balance: widget.totalIncome - widget.totalExpense,
-          ),
+        return SummaryCard(
+          totalIncome: widget.totalIncome,
+          totalExpense: widget.totalExpense,
+          balance: widget.totalIncome - widget.totalExpense,
         );
       case 1:
-        return Hero(
-          tag: 'chart-widget',
-          child: Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: SummaryChart(
-              totalIncome: widget.totalIncome,
-              totalExpense: widget.totalExpense,
-            ),
+        return _CardWrapper(
+          child: SummaryChart(
+            totalIncome: widget.totalIncome,
+            totalExpense: widget.totalExpense,
           ),
         );
       case 2:
       default:
-        return Hero(
-          tag: 'category-pie-chart',
-          child: Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: CategoryPieChart(
-              incomeTransactions: widget.incomeTransactions,
-              expenseTransactions: widget.expenseTransactions,
-            ),
+        return _CardWrapper(
+          child: CategoryPieChart(
+            incomeTransactions: widget.incomeTransactions,
+            expenseTransactions: widget.expenseTransactions,
           ),
         );
     }
+  }
+}
+
+class _CardWrapper extends StatelessWidget {
+  final Widget child;
+
+  const _CardWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2D40) : AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2A3A50) : AppColors.grey200,
+          width: 1,
+        ),
+      ),
+      child: child,
+    );
   }
 }
