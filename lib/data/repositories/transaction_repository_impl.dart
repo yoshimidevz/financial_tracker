@@ -40,6 +40,13 @@ class TransactionRepositoryImpl implements TransactionRepositoryContract {
   }
 
   @override
+  Future<Result<void, Failure>> updateTransacion(
+    TransactionEntity transaction,
+  ) {
+    return _dataSource.updateTransacion(transaction);
+  }
+
+  @override
   Future<Result<List<TransactionEntity>, Failure>> getTransacionsByDate(
     DateTime startDate,
     DateTime endDate,
