@@ -1,6 +1,6 @@
 import 'dart:convert';
-
 import 'package:uuid/uuid.dart';
+import 'transaction_category.dart';
 
 enum TransactionType { income, expense }
 
@@ -23,14 +23,15 @@ extension TransactionTypeExtension on TransactionType {
     }
   }
 }
+
 class TransactionEntity {
   final String id;
   final String title;
   final double amount;
   final DateTime date;
   final TransactionType type;
+  final TransactionCategory category;
 
-  // Instância estática do Uuid para usar generate()
   static final Uuid _uuid = Uuid();
 
   TransactionEntity({
@@ -39,7 +40,10 @@ class TransactionEntity {
     required this.amount,
     required this.date,
     required this.type,
-  }) : id = id ?? _uuid.v4();
+    TransactionCategory? category,
+  })  : id = id ?? _uuid.v4(),
+        category =
+            category ?? TransactionCategoryExtension.defaultFor(type);
 
   TransactionEntity copyWith({
     String? id,
@@ -47,6 +51,7 @@ class TransactionEntity {
     double? amount,
     DateTime? date,
     TransactionType? type,
+    TransactionCategory? category,
   }) {
     return TransactionEntity(
       id: id ?? this.id,
@@ -54,6 +59,7 @@ class TransactionEntity {
       amount: amount ?? this.amount,
       date: date ?? this.date,
       type: type ?? this.type,
+      category: category ?? this.category,
     );
   }
 
@@ -64,21 +70,30 @@ class TransactionEntity {
       'amount': amount,
       'date': date.toUtc().toIso8601String(),
       'type': type.name,
+      'category': category.name,
     };
   }
 
   String toJson() => jsonEncode(toMap());
 
   factory TransactionEntity.fromMap(Map<String, dynamic> map) {
+    final type = TransactionType.values.firstWhere(
+      (e) => e.name == map['type'],
+      orElse: () => TransactionType.expense,
+    );
+
     return TransactionEntity(
       id: map['id'],
       title: map['title'],
       amount: map['amount'],
       date: DateTime.parse(map['date']).toLocal(),
-      type: TransactionType.values.firstWhere(
-        (e) => e.name == map['type'],
-        orElse: () => TransactionType.expense,
-      ),
+      type: type,
+      category: map['category'] != null
+          ? TransactionCategory.values.firstWhere(
+              (e) => e.name == map['category'],
+              orElse: () => TransactionCategoryExtension.defaultFor(type),
+            )
+          : TransactionCategoryExtension.defaultFor(type),
     );
   }
 
@@ -88,6 +103,7 @@ class TransactionEntity {
       amount: 30.0,
       date: DateTime.now(),
       type: TransactionType.expense,
+      category: TransactionCategory.alimentacao,
     );
   }
 
@@ -97,27 +113,30 @@ class TransactionEntity {
       amount: 2500.0,
       date: DateTime.now(),
       type: TransactionType.income,
+      category: TransactionCategory.salario,
     );
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-  
+
     return other is TransactionEntity &&
-      other.id == id &&
-      other.title == title &&
-      other.amount == amount &&
-      other.date == date &&
-      other.type == type;
+        other.id == id &&
+        other.title == title &&
+        other.amount == amount &&
+        other.date == date &&
+        other.type == type &&
+        other.category == category;
   }
 
   @override
   int get hashCode {
     return id.hashCode ^
-      title.hashCode ^
-      amount.hashCode ^
-      date.hashCode ^
-      type.hashCode;
+        title.hashCode ^
+        amount.hashCode ^
+        date.hashCode ^
+        type.hashCode ^
+        category.hashCode;
   }
 }
