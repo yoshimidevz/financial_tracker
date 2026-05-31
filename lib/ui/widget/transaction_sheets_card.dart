@@ -2,6 +2,7 @@ import 'package:financial_tracker/common/errors/errors_classes.dart';
 import 'package:financial_tracker/common/patterns/command.dart';
 
 import '../../common/utils/formatter.dart';
+import '../../domain/entity/transaction_category.dart';
 import '../../domain/entity/transaction_entity.dart';
 import 'package:flutter/material.dart';
 
@@ -300,48 +301,67 @@ class _TransactionCardSheetsState extends State<TransactionCardSheets>
               margin: const EdgeInsets.symmetric(
                 horizontal: 5,
                 vertical: 4,
-              ), // Margem do card da transação
-              elevation: 0, // Sem sombra
+              ),
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12), // Bordas arredondadas
-                side: BorderSide(
-                  color: Colors.grey.shade300,
-                ), // Borda cinza clara
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade300),
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
-                ), // Espaçamento interno do item
+                  vertical: 6,
+                ),
                 leading: CircleAvatar(
                   radius: 22,
-                  backgroundColor: color.withValues(
-                    alpha: 0.2,
-                  ), // Fundo com transparência
+                  backgroundColor: color.withValues(alpha: 0.15),
                   child: Icon(
-                    title == 'Income' ? Icons.attach_money : Icons.shopping_bag,
-                    color: color, // Cor do ícone conforme tipo
+                    transaction.category.icon,
+                    color: color,
+                    size: 20,
                   ),
                 ),
                 title: Text(
-                  transaction.title, // Título da transação
+                  transaction.title,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                subtitle: Text(
-                  Formatter.formatDate(transaction.date), // Data formatada
-                  style: Theme.of(context).textTheme.bodySmall,
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 2),
+                    Text(
+                      Formatter.formatDate(transaction.date),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        transaction.category.label,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      Formatter.formatCurrency(
-                        transaction.amount,
-                      ), // Valor formatado em moeda
+                      Formatter.formatCurrency(transaction.amount),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
                     ),
                     const SizedBox(width: 4),
                     IconButton(
