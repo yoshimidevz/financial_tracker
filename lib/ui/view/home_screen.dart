@@ -77,9 +77,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Watch((context) {
               final income = viewModelController.totalIncome.value;
               final expense = viewModelController.totalExpense.value;
+              final incomes = viewModelController.incomes.value;
+              final expenses = viewModelController.expenses.value;
               return SummaryCarousel(
                 totalIncome: income,
                 totalExpense: expense,
+                incomeTransactions: incomes,
+                expenseTransactions: expenses,
               );
             }),
             // SummaryCarousel(totalIncome: 4500.00, totalExpense: 1500.00),
