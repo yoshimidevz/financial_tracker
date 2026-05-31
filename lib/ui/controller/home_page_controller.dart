@@ -22,6 +22,7 @@ class HomePageController {
     saveTransaction = Command1(_saveTransaction);
     undoDelectedTransaction = Command1(_undoDelectedTransaction);
     deleteTransaction = Command1(_deleteTransaction);
+    editTransaction = Command1(_editTransaction);
     //loadSample = Command0<void, void>(_resetToSample);
     incomes = Computed(
       () =>
@@ -60,6 +61,7 @@ class HomePageController {
   // commands
   late final Command0<List<TransactionEntity>, Failure> load;
   late final Command1<void, Failure, TransactionEntity> saveTransaction;
+  late final Command1<void, Failure, TransactionEntity> editTransaction;
   late final Command1<void, Failure, TransactionEntity> undoDelectedTransaction;
   late final Command1<void, Failure, String> deleteTransaction;
   late final Command2<List<TransactionEntity>, Failure, DateTime, DateTime>
@@ -144,6 +146,24 @@ class HomePageController {
 
     if (result.isSuccess) {
       _transactions.value = [..._transactions.value, transaction];
+    }
+
+    return result;
+  }
+
+  // Edita transação existente e atualiza signal
+  Future<Result<void, Failure>> _editTransaction(
+    TransactionEntity transaction,
+  ) async {
+    final result = await _transactionsUseCases.updateTransaction.call((
+      transaction: transaction,
+    ));
+
+    if (result.isSuccess) {
+      _transactions.value =
+          _transactions.value
+              .map((e) => e.id == transaction.id ? transaction : e)
+              .toList();
     }
 
     return result;
