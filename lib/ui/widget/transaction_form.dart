@@ -8,11 +8,7 @@ import 'package:signals_flutter/signals_flutter.dart';
 /// Um widget reutilizável de formulário para adicionar transações de receita ou despesa
 class TransactionForm extends StatefulWidget {
   /// Comando que deve ser observado o estado de execução
-  /// e o resultado da execução
   final Command1<void, Failure, TransactionEntity> submitCommand;
-
-  /// Função de callback quando o formulário é enviado
-  //final Function(TransactionEntity newTransaction) onSubmit;
 
   /// Tipo de transação (receita ou despesa)
   final TransactionType type;
@@ -20,12 +16,15 @@ class TransactionForm extends StatefulWidget {
   /// Cor do tema para o formulário
   final Color color;
 
+  /// Transação existente para edição (null = novo registro)
+  final TransactionEntity? initialTransaction;
+
   const TransactionForm({
     super.key,
-    //required this.onSubmit,
     required this.type,
     required this.color,
     required this.submitCommand,
+    this.initialTransaction,
   });
 
   @override
@@ -34,9 +33,26 @@ class TransactionForm extends StatefulWidget {
 
 class _TransactionFormState extends State<TransactionForm> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _amountController = TextEditingController();
-  DateTime _selectedDate = DateTime.now();
+  late final TextEditingController _titleController;
+  late final TextEditingController _amountController;
+  late DateTime _selectedDate;
+
+  bool get _isEditing => widget.initialTransaction != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pré-preenche os campos se estiver editando
+    _titleController = TextEditingController(
+      text: widget.initialTransaction?.title ?? '',
+    );
+    _amountController = TextEditingController(
+      text: widget.initialTransaction != null
+          ? widget.initialTransaction!.amount.toStringAsFixed(2)
+          : '',
+    );
+    _selectedDate = widget.initialTransaction?.date ?? DateTime.now();
+  }
 
   @override
   void dispose() {
@@ -67,22 +83,23 @@ class _TransactionFormState extends State<TransactionForm> {
       final enteredTitle = _titleController.text;
       final enteredAmount = double.parse(_amountController.text);
 
-      final newTransaction = TransactionEntity(
+      final transaction = TransactionEntity(
+        // Mantém o mesmo ID se for edição
+        id: widget.initialTransaction?.id,
         title: enteredTitle,
         amount: enteredAmount,
         date: _selectedDate,
         type: widget.type,
       );
 
-      //widget.onSubmit(newTransaction);
-      await widget.submitCommand.execute(newTransaction);
+      await widget.submitCommand.execute(transaction);
 
       if (widget.submitCommand.resultSignal.value?.isFailure ?? false) {
-        // Se o comando falhar, exibe uma mensagem de erro
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Erro ao adicionar ${widget.type.nameSingular}: ${widget.submitCommand.resultSignal.value?.failureValueOrNull ?? 'Erro desconhecido'}',
+              'Erro ao ${_isEditing ? 'editar' : 'adicionar'} ${widget.type.nameSingular}: '
+              '${widget.submitCommand.resultSignal.value?.failureValueOrNull ?? 'Erro desconhecido'}',
             ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
@@ -92,17 +109,19 @@ class _TransactionFormState extends State<TransactionForm> {
         return;
       }
 
-      // Limpa os campos do formulário
-      _titleController.clear();
-      _amountController.clear();
-      setState(() {
-        _selectedDate = DateTime.now();
-      });
+      if (!_isEditing) {
+        _titleController.clear();
+        _amountController.clear();
+        setState(() {
+          _selectedDate = DateTime.now();
+        });
+      }
 
-      // Mostra uma mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${widget.type.nameSingular} Adicionada com Sucesso!'),
+          content: Text(
+            '${widget.type.nameSingular} ${_isEditing ? 'atualizada' : 'adicionada'} com sucesso!',
+          ),
           backgroundColor: widget.color,
           duration: const Duration(seconds: 2),
         ),
@@ -120,7 +139,7 @@ class _TransactionFormState extends State<TransactionForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Campo de entrada para a descrição (título)
+            // Campo de descrição
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -139,7 +158,7 @@ class _TransactionFormState extends State<TransactionForm> {
             ),
             const SizedBox(height: 16),
 
-            // Campo de entrada para o valor
+            // Campo de valor
             TextFormField(
               controller: _amountController,
               decoration: InputDecoration(
@@ -167,7 +186,7 @@ class _TransactionFormState extends State<TransactionForm> {
             ),
             const SizedBox(height: 16),
 
-            // Seção para exibir e escolher a data
+            // Seletor de data
             Row(
               children: [
                 Expanded(
@@ -190,7 +209,7 @@ class _TransactionFormState extends State<TransactionForm> {
             ),
             const SizedBox(height: 32),
 
-            // Botão de envio do formulário
+            // Botão de envio
             Watch((context) {
               final isRunning = widget.submitCommand.runningSignal.value;
 
@@ -217,7 +236,9 @@ class _TransactionFormState extends State<TransactionForm> {
                             ),
                           )
                           : Text(
-                            'Adicionar ${widget.type.nameSingular}',
+                            _isEditing
+                                ? 'Salvar ${widget.type.nameSingular}'
+                                : 'Adicionar ${widget.type.nameSingular}',
                             style: const TextStyle(fontSize: 16),
                           ),
                 ),
