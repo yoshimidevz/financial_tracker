@@ -1,19 +1,26 @@
 import 'package:financial_tracker/common/errors/errors_classes.dart';
 import 'package:financial_tracker/common/patterns/command.dart';
-import 'package:financial_tracker/common/theme/app_theme.dart';
 
 import '../../common/utils/formatter.dart';
 import '../../domain/entity/transaction_category.dart';
 import '../../domain/entity/transaction_entity.dart';
 import 'package:flutter/material.dart';
 
+/// widget que exibe uma lista de transações de receitas e despesas
 class TransactionCardSheets extends StatefulWidget {
-  final List<TransactionEntity> incomeTransactions;
-  final List<TransactionEntity> expenseTransactions;
-  final Function(String id) onDelete;
-  final Function(TransactionEntity transaction) onEdit;
-  final Command1<void, Failure, TransactionEntity> undoDelete;
-  final BuildContext scaffoldContext;
+  final List<TransactionEntity>
+  incomeTransactions; // Lista de transações de receitas
+  final List<TransactionEntity>
+  expenseTransactions; // Lista de transações de despesas
+  final Function(String id)
+  onDelete; // Callback para deletar uma transação pelo ID
+  final Function(TransactionEntity transaction)
+  onEdit; // Callback para editar uma transação
+
+  final Command1<void, Failure, TransactionEntity>
+  undoDelete; // Callback para desfazer exclusão
+  final BuildContext
+  scaffoldContext; // Contexto do Scaffold para exibir SnackBars
 
   const TransactionCardSheets({
     super.key,
@@ -31,131 +38,141 @@ class TransactionCardSheets extends StatefulWidget {
 
 class _TransactionCardSheetsState extends State<TransactionCardSheets>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late TabController _tabController; // Controlador para o TabBar e TabBarView
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+    ); // 2 abas: Receitas e Despesas
     _tabController.addListener(() {
-      if (mounted) setState(() {});
+      if (mounted)
+        setState(() {}); // Atualiza o estado quando troca de aba acontece
     });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _tabController.dispose(); // Limpa o controlador para evitar leaks
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Card(
+      elevation: 8, // Elevação do card para sombra
+      margin: const EdgeInsets.all(12), // Margem externa do card
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ), // Bordas arredondadas
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Section header ─────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Transações',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
-                color: isDark ? AppColors.white : AppColors.grey800,
+          Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: colorScheme.tertiary.withValues(
+                    alpha: 0.15,
+                  ), // Fundo com transparência
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ), // Apenas bordas superiores arredondadas
+                ),
+                child: TabBar(
+                  controller: _tabController, // Controlador das abas
+                  tabs: [
+                    _buildTab(
+                      TransactionType.income.namePlural, // Título da aba
+                      Icons.arrow_upward, // Ícone da aba
+                      0, // Índice da aba
+                      colorScheme.primary, // Cor ativa
+                      colorScheme.primary.withValues(alpha: 0.5), // Cor inativa
+                    ),
+                    _buildTab(
+                      TransactionType.expense.namePlural,
+                      Icons.arrow_downward,
+                      1,
+                      colorScheme.secondary,
+                      colorScheme.secondary.withValues(alpha: 0.5),
+                    ),
+                  ],
+                  indicatorColor:
+                      _tabController.index ==
+                              0 // Cor do indicador da aba selecionada
+                          ? colorScheme.primary
+                          : colorScheme.secondary,
+                  indicatorSize:
+                      TabBarIndicatorSize
+                          .label, // Indicador do tamanho do label
+                ),
               ),
-            ),
-          ),
-
-          // ── Tab bar (pill style) ───────────────────────────────────────
-          Container(
-            height: 40,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A2B3C) : AppColors.grey100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              padding: EdgeInsets.zero,
-              indicator: BoxDecoration(
-                color: isDark ? AppColors.blue700 : AppColors.blue700,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: AppColors.grey400,
-              tabs: [
-                _buildTab(TransactionType.income.namePlural,
-                    Icons.arrow_upward_rounded, 0),
-                _buildTab(TransactionType.expense.namePlural,
-                    Icons.arrow_downward_rounded, 1),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // ── Tab content ────────────────────────────────────────────────
-          Container(
-            height: 300,
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E2D40) : AppColors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isDark ? const Color(0xFF2A3A50) : AppColors.grey200,
-                width: 1,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildTransactionList(
-                    context,
-                    widget.incomeTransactions,
-                    AppColors.blue700,
-                    TransactionType.income.namePlural,
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ), // Arredonda bordas inferiores para combinar com o card
+                child: SizedBox(
+                  height: 290, // Altura fixa do conteúdo da aba
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTransactionList(
+                        context,
+                        widget.incomeTransactions, // Lista de receitas
+                        colorScheme.primary,
+                        TransactionType.income.namePlural,
+                      ),
+                      _buildTransactionList(
+                        context,
+                        widget.expenseTransactions, // Lista de despesas
+                        colorScheme.secondary,
+                        TransactionType.expense.namePlural,
+                      ),
+                    ],
                   ),
-                  _buildTransactionList(
-                    context,
-                    widget.expenseTransactions,
-                    AppColors.expense,
-                    TransactionType.expense.namePlural,
-                  ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String title, IconData icon, int index) {
-    final isSelected = _tabController.index == index;
+  Widget _buildTab(
+    String title,
+    IconData icon,
+    int index,
+    Color activeColor,
+    Color inactiveColor,
+  ) {
+    final isSelected =
+        _tabController.index == index; // Verifica se a aba está selecionada
+    final color =
+        isSelected ? activeColor : inactiveColor; // Cor ativa ou inativa
+
     return Tab(
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min, // Tamanho da linha adaptado ao conteúdo
         children: [
-          Icon(icon, size: 14),
-          const SizedBox(width: 5),
-          Text(title),
+          Icon(icon, size: 18, color: color), // Ícone da aba com a cor correta
+          const SizedBox(width: 8), // Espaço entre ícone e texto
+          Text(
+            title, // Texto da aba
+            style: TextStyle(
+              color: color, // Cor do texto (ativa ou inativa)
+              fontWeight:
+                  isSelected
+                      ? FontWeight.bold
+                      : FontWeight.normal, // Negrito se selecionada
+            ),
+          ),
         ],
       ),
     );
@@ -167,222 +184,205 @@ class _TransactionCardSheetsState extends State<TransactionCardSheets>
     Color color,
     String title,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     if (transactions.isEmpty) {
       return Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center, // Centraliza conteúdo
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF243347) : AppColors.grey50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                title == TransactionType.income.namePlural
-                    ? Icons.savings_outlined
-                    : Icons.shopping_bag_outlined,
-                size: 28,
-                color: AppColors.grey400,
-              ),
+            Icon(
+              title ==
+                      TransactionType
+                          .income
+                          .namePlural // Receitas
+                  ? Icons.savings
+                  : Icons.shopping_cart, // Ícone condicional
+              size: 48,
+              color: Colors.grey,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Sem ${title.toLowerCase()} registradas',
-              style: const TextStyle(
-                color: AppColors.grey400,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+              'Sem ${title.toLowerCase()} registradas', // Mensagem de lista vazia
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.grey[600],
+              ), // Estilo e cor do texto
             ),
           ],
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: transactions.length,
-      separatorBuilder: (_, __) => Divider(
-        height: 1,
-        indent: 16,
-        endIndent: 16,
-        color: isDark ? const Color(0xFF2A3A50) : AppColors.grey100,
-      ),
-      itemBuilder: (context, index) {
-        final transaction = transactions[index];
-        final undoTransaction = transaction.copyWith();
+    return Scrollbar(
+      thumbVisibility: true, // Mostra a barra de rolagem sempre
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(
+          vertical: 8,
+        ), // Espaçamento vertical na lista
+        itemCount: transactions.length, // Quantidade de itens da lista
+        itemBuilder: (context, index) {
+          final transaction = transactions[index];
+          final undoTransaction =
+              transaction.copyWith(); // Cópia para desfazer exclusão
 
-        return Dismissible(
-          key: Key(transaction.id),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 20),
-            color: AppColors.negative.withOpacity(0.08),
-            child: Container(
-              padding: const EdgeInsets.all(8),
+          return Dismissible(
+            key: Key(transaction.id), // Chave única para controle do widget
+            direction:
+                DismissDirection
+                    .endToStart, // Permite deslizar da direita para esquerda
+            background: Container(
+              alignment:
+                  Alignment.centerRight, // Ícone aparece alinhado à direita
+              padding: const EdgeInsets.only(
+                right: 20.0,
+              ), // Espaçamento interno
               decoration: BoxDecoration(
-                color: AppColors.negative,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.delete_outline_rounded,
-                  color: Colors.white, size: 18),
-            ),
-          ),
-          onDismissed: (direction) async {
-            await widget.onDelete(transaction.id);
-
-            ScaffoldMessenger.of(widget.scaffoldContext).clearSnackBars();
-            ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
-              SnackBar(
-                content: Text('${transaction.title} excluída'),
-                backgroundColor: isDark ? const Color(0xFF1E2D40) : AppColors.grey800,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                action: SnackBarAction(
-                  label: 'DESFAZER',
-                  textColor: AppColors.blue200,
-                  onPressed: () async {
-                    await widget.undoDelete.execute(undoTransaction);
-                    final ok = widget.undoDelete.resultSignal.value?.isSuccess ?? false;
-                    ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
-                      SnackBar(
-                        content: Text(ok
-                            ? '${transaction.title} restaurada!'
-                            : '${widget.undoDelete.resultSignal.value?.failureValueOrNull ?? 'Erro desconhecido'}'),
-                        backgroundColor: ok ? AppColors.positive : AppColors.negative,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-          child: _TransactionTile(
-            transaction: transaction,
-            color: color,
-            onEdit: () => widget.onEdit(transaction),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _TransactionTile extends StatelessWidget {
-  final TransactionEntity transaction;
-  final Color color;
-  final VoidCallback onEdit;
-
-  const _TransactionTile({
-    required this.transaction,
-    required this.color,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: () {},
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: Colors.red, // Fundo vermelho para exclusão
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(transaction.category.icon, color: color, size: 18),
+              child: const Icon(
+                Icons.delete,
+                color: Colors.white,
+              ), // Ícone de exclusão
             ),
+            onDismissed: (direction) async {
+              
+              await widget.onDelete(
+                transaction.id,
+              ); // Chama callback para deletar transação
 
-            const SizedBox(width: 12),
+              ScaffoldMessenger.of(widget.scaffoldContext).clearSnackBars();
+              // Limpa snackbars anteriores para evitar sobreposição
 
-            // Title + date + category
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    transaction.title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.white : AppColors.grey800,
+              ScaffoldMessenger.of(widget.scaffoldContext).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${transaction.title} excluída!!!',
+                  ), // Mensagem de exclusão
+                  backgroundColor:
+                      Colors.pinkAccent, // Cor do snackbar vermelho
+                  action: SnackBarAction(
+                    label: 'DESFAZER', // Botão para desfazer
+                    textColor: Colors.white,
+                    onPressed: () async {
+                      // Chama callback para desfazer exclusão
+                      await widget.undoDelete.execute(undoTransaction);
+                      //print(widget.undoDelete.resultSignal.value);
+                      if (widget.undoDelete.resultSignal.value?.isSuccess ??
+                          false) {
+                        ScaffoldMessenger.of(
+                          widget.scaffoldContext,
+                        ).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${transaction.title} restaurada!',
+                            ), // Mensagem de restauração
+                            backgroundColor:
+                                Colors.green, // Cor do snackbar verde
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(
+                          widget.scaffoldContext,
+                        ).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${widget.undoDelete.resultSignal.value?.failureValueOrNull ?? 'Erro desconhecido'}',
+                            ), // Mensagem de restauração
+                            backgroundColor:
+                                Colors.red, // Cor do snackbar verde
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              );
+            },
+            child: Card(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 5,
+                vertical: 4,
+              ),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
+                leading: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: color.withValues(alpha: 0.15),
+                  child: Icon(
+                    transaction.category.icon,
+                    color: color,
+                    size: 20,
+                  ),
+                ),
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Text(
-                        Formatter.formatDate(transaction.date),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.grey400,
-                          fontWeight: FontWeight.w400,
+                    const SizedBox(height: 2),
+                    Text(
+                      Formatter.formatDate(transaction.date),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              transaction.category.label,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: color,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 3,
-                        height: 3,
-                        decoration: const BoxDecoration(
-                          color: AppColors.grey400,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        transaction.category.label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: color,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      Formatter.formatCurrency(transaction.amount),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: 18, color: color),
+                      tooltip: 'Editar transação',
+                      onPressed: () => widget.onEdit(transaction),
+                    ),
+                  ],
+                ),
               ),
             ),
-
-            // Amount + edit
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  Formatter.formatCurrency(transaction.amount),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                GestureDetector(
-                  onTap: onEdit,
-                  child: const Icon(Icons.edit_outlined,
-                      size: 14, color: AppColors.grey400),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
