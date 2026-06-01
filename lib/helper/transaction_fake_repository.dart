@@ -46,12 +46,12 @@ class TransactionFakeRepository {
   Future<void> addData(String transactionJson) async {
     await Future.delayed(const Duration(seconds: 2));
 
-    // Simula uma falha
-    if (Random().nextBool()) {
-      Random().nextBool()
-          ? throw APIFailure(MessagesError.apiError)
-          : throw InvalidData(MessagesError.recordInvalidFormat);
-    }
+    // Simulação de falha aleatória (desativado)
+    // if (Random().nextBool()) {
+    //   Random().nextBool()
+    //       ? throw APIFailure(MessagesError.apiError)
+    //       : throw InvalidData(MessagesError.recordInvalidFormat);
+    // }
 
     if (transactionJson.isEmpty) {
       throw InvalidData(MessagesError.recordInvalidFormat);
